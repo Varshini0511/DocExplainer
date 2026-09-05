@@ -1,0 +1,18 @@
+# .NET
+**/bin/
+**/obj/
+*.user
+*.suo
+.vs/
+
+# Secrets — NEVER push these
+**/appsettings.Development.json
+
+# Next.js
+chat-ui/.next/
+chat-ui/node_modules/
+chat-ui/.env.local
+
+# OS
+.DS_Store
+Thumbs.db
