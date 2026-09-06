@@ -305,11 +305,100 @@ npm run dev
 
 ## Deployment
 
-| Service | Platform | Free Tier |
+### Live URLs
+| Service | URL |
+|---|---|
+| Frontend | https://docexplainer-xxx.vercel.app (update with your Vercel URL) |
+| Backend | https://docexplainer.onrender.com |
+| Swagger | https://docexplainer.onrender.com/swagger |
+
+### Free Tier Behavior
+| Service | Platform | What Happens |
 |---|---|---|
-| Frontend | Vercel | Free forever |
-| Backend | Render | Free (sleeps after 15 min) |
-| Database | Supabase | Free forever (500 MB) |
+| Frontend | Vercel | Free forever, never expires |
+| Backend | Render | Sleeps after 15 min inactivity — first request takes ~60s to wake up |
+| Database | Supabase | Pauses after 1 week of inactivity — restore from dashboard |
+
+---
+
+## How to Redeploy (If Services Go Inactive)
+
+### If Supabase paused
+1. Go to [supabase.com](https://supabase.com) → your project
+2. Click **Restore project** (shown on the dashboard)
+3. Wait ~2 min for it to come back online
+4. No data is lost — it just paused
+
+### If Render service is down
+1. Go to [render.com](https://render.com) → DocExplainer service
+2. Click **Manual Deploy → Deploy latest commit**
+3. Wait 3-5 min for build to complete
+
+### Full Redeploy from Scratch
+
+If you need to redeploy everything from zero:
+
+#### 1. Supabase — Create Database
+1. Go to [supabase.com](https://supabase.com) → New project (or use existing)
+2. Go to **SQL Editor** → run:
+```sql
+CREATE SCHEMA IF NOT EXISTS docexplainer;
+CREATE EXTENSION IF NOT EXISTS vector;
+
+CREATE TABLE IF NOT EXISTS docexplainer.document_chunks (
+    id          SERIAL PRIMARY KEY,
+    filename    TEXT NOT NULL,
+    chunk_index INTEGER NOT NULL,
+    chunk_text  TEXT NOT NULL,
+    embedding   vector(768)
+);
+
+CREATE INDEX IF NOT EXISTS document_chunks_embedding_idx
+ON docexplainer.document_chunks USING hnsw (embedding vector_cosine_ops);
+```
+3. Click **Connect** (top right) → copy the connection string URI
+4. Replace `[YOUR-PASSWORD]` with your DB password
+
+#### 2. Render — Deploy Backend
+1. Go to [render.com](https://render.com) → New → Web Service
+2. Connect GitHub → select **DocExplainer** repo
+3. Settings:
+   - **Language**: Docker
+   - **Root Directory**: `backend`
+   - **Branch**: `master`
+   - **Instance Type**: Free
+4. Add these **Environment Variables**:
+
+| Key | Value |
+|---|---|
+| `ASPNETCORE_ENVIRONMENT` | `Production` |
+| `ConnectionStrings__DefaultConnection` | `Host=db.xxx.supabase.co;Port=5432;Database=postgres;Username=postgres;Password=YOUR_PASSWORD;Search Path=docexplainer;SSL Mode=Require;Trust Server Certificate=true` |
+| `Gemini__ApiKey` | Your Gemini API key from [aistudio.google.com](https://aistudio.google.com/app/apikey) |
+| `Groq__ApiKey` | Your Groq API key from [console.groq.com](https://console.groq.com) |
+| `Groq__Model` | `llama-3.3-70b-versatile` |
+
+5. Click **Deploy web service** — wait 3-5 min
+6. Copy the Render URL (e.g. `https://docexplainer.onrender.com`)
+
+#### 3. Vercel — Deploy Frontend
+1. Go to [vercel.com](https://vercel.com) → New Project
+2. Import **DocExplainer** from GitHub
+3. Settings:
+   - **Root Directory**: `chat-ui`
+   - **Framework**: Next.js
+4. Add **Environment Variable**:
+
+| Key | Value |
+|---|---|
+| `NEXT_PUBLIC_API_URL` | Your Render URL (e.g. `https://docexplainer.onrender.com`) |
+
+5. Click **Deploy** — done!
+
+### API Keys (Free Tier)
+| Key | Where to Get | Free Limit |
+|---|---|---|
+| Gemini API Key | [aistudio.google.com/app/apikey](https://aistudio.google.com/app/apikey) | 1500 embedding requests/day |
+| Groq API Key | [console.groq.com](https://console.groq.com) | Very generous free tier |
 
 ---
 
